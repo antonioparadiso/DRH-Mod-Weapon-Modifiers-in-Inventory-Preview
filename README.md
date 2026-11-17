@@ -9,8 +9,10 @@ Made by **Qwettque**.
 ## Features
 
 - Shows each weapon's required level and its modifier icons and levels on inventory cards.
+- Places the level at the upper-left and centers modifier icons along the bottom of each card.
 - Shows the same information on the three equipped weapon slots at the bottom of the inventory/store screen.
 - Includes the legendary modifier icon.
+- Keeps inventory badges aligned when dynamic rarity backgrounds are enabled.
 - Refreshes weapon cards and equipped slots only while the town inventory/store screen is open.
 
 ## Credits and Acknowledgments

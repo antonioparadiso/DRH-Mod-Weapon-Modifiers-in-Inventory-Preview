@@ -8,6 +8,8 @@ import brain.stateMachine.StateMachine;
 import brain.uI.UIObject;
 import facade.DBFacade;
 import flash.display.DisplayObject;
+import flash.geom.Point;
+import flash.geom.Rectangle;
 import haxe.Timer;
 import mods.api.Context;
 import mods.api.Mod;
@@ -19,6 +21,7 @@ import openfl.text.TextFieldAutoSize;
 import openfl.text.TextFormat;
 import town.InventoryTownSubState;
 import uI.inventory.UIInventory;
+import uI.inventory.UIInventoryItem;
 
 /** Shows each weapon's level and modifier icons on cards in the town inventory. */
 @:privateAccess
@@ -26,6 +29,7 @@ class Main extends Mod {
 	static inline final ROW_NAME:String = "weaponModifierIcons";
 	static inline final WEAPON_LEVEL_NAME:String = "weaponLevelBadge";
 	static inline final MODIFIER_ICONS_SWF:String = "Resources/Art2D/Icons/Modifier/db_icons_modifier.swf";
+	static inline final ICON_CANVAS_SIZE:Float = 72;
 	static inline final ICON_SIZE:Float = 18;
 	static inline final BADGE_WIDTH:Float = 18;
 	static inline final BADGE_HEIGHT:Float = 18;
@@ -75,9 +79,10 @@ class Main extends Mod {
 				removeWeaponLevel(root);
 				continue;
 			}
-			drawWeaponLevel(root, info);
+			var iconBounds = card.mIcon == null ? root.getBounds(root) : fixedIconBounds(card.mIcon, root);
+			drawWeaponLevel(root, info, 2, iconBounds);
 			if (iconAsset != null)
-				drawBadges(root, info);
+				drawBadges(root, info, 0, iconBounds);
 		}
 
 		scanEquippedWeapons(inventory);
@@ -106,17 +111,30 @@ class Main extends Mod {
 			var boundsSource:DisplayObject = weaponArt == null ? slotFrame : weaponArt;
 			if (boundsSource == null)
 				continue;
+			var iconBounds = boundsSource.getBounds(root);
 			// Use the fixed slot frame immediately, then switch to the weapon's actual
 			// bounds as soon as its asynchronously loaded icon becomes available.
-			drawWeaponLevel(root, info, -11, boundsSource);
+			drawWeaponLevel(root, info, -11, iconBounds);
 			if (iconAsset != null)
-				drawBadges(root, info, 0, boundsSource);
+				drawBadges(root, info, 0, iconBounds);
 		}
 	}
 
-	function drawWeaponLevel(root:DisplayObjectContainer, info:ItemInfo, topInset:Float = 11, boundsSource:DisplayObject = null):Void {
+	function fixedIconBounds(icon:DisplayObject, root:DisplayObjectContainer):Rectangle {
+		// The icon clip is centered on its registration point. Its normalized 72px canvas
+		// and dynamic rarity background are both centered there; ignore the background bounds.
+		var half = ICON_CANVAS_SIZE / 2;
+		var topLeft = root.globalToLocal(icon.localToGlobal(new Point(-half, -half)));
+		var bottomRight = root.globalToLocal(icon.localToGlobal(new Point(half, half)));
+		var x = Math.min(topLeft.x, bottomRight.x);
+		var y = Math.min(topLeft.y, bottomRight.y);
+		return new Rectangle(x, y, Math.abs(bottomRight.x - topLeft.x), Math.abs(bottomRight.y - topLeft.y));
+	}
+
+	function drawWeaponLevel(root:DisplayObjectContainer, info:ItemInfo, topInset:Float = 11, bounds:Rectangle = null):Void {
 		var level = Std.string(info.requiredLevel);
-		var bounds = boundsSource == null ? root.getBounds(root) : boundsSource.getBounds(root);
+		if (bounds == null)
+			bounds = root.getBounds(root);
 		var old = findWeaponLevel(root);
 		if (old != null && old.name == WEAPON_LEVEL_NAME + "|" + level) {
 			old.x = bounds.x + 3;
@@ -151,7 +169,7 @@ class Main extends Mod {
 		root.addChild(badge);
 	}
 
-	function drawBadges(root:DisplayObjectContainer, info:ItemInfo, bottomInset:Float = 12, boundsSource:DisplayObject = null):Void {
+	function drawBadges(root:DisplayObjectContainer, info:ItemInfo, bottomInset:Float = 12, bounds:Rectangle = null):Void {
 		var badges:Array<BadgeData> = [];
 		for (modifier in info.modifiers) {
 			if (modifier == null)
@@ -192,7 +210,8 @@ class Main extends Mod {
 		}
 
 		var count = badges.length;
-		var bounds = boundsSource == null ? root.getBounds(root) : boundsSource.getBounds(root);
+		if (bounds == null)
+			bounds = root.getBounds(root);
 		var available = Math.max(BADGE_WIDTH, bounds.width - 4);
 		var width = Math.min(BADGE_WIDTH, (available - (count - 1) * GAP) / count);
 		var step = width + GAP;
