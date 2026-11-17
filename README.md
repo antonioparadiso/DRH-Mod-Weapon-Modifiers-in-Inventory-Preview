@@ -1,6 +1,6 @@
 # Weapon Modifiers in Inventory Preview
 
-A mod for Dungeon Rampage Haxe that displays the icon and level of each modifier within the inventory's weapon grid.
+A mod for Dungeon Rampage Haxe that displays weapon levels and modifier icons in the inventory and equipped weapon slots.
 
 Made by **Qwettque**.
 
@@ -8,9 +8,10 @@ Made by **Qwettque**.
 
 ## Features
 
-- Shows the original in-game icon and level for each weapon modifier on its inventory card.
+- Shows each weapon's required level and its modifier icons and levels on inventory cards.
+- Shows the same information on the three equipped weapon slots at the bottom of the inventory/store screen.
 - Includes the legendary modifier icon.
-- Refreshes the visible weapon cards only while the town inventory is open.
+- Refreshes weapon cards and equipped slots only while the town inventory/store screen is open.
 
 ## Credits and Acknowledgments
 

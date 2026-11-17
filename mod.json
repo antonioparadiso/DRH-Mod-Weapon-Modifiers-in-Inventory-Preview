@@ -1,8 +1,8 @@
 {
   "id": "weapon_modifiers_in_inventory_preview",
   "name": "Weapon Modifiers in Inventory Preview",
-  "description": "Displays the weapon's level and the icons and levels of its modifiers on inventory cards.",
-  "version": "0.1.0",
+  "description": "Displays weapon levels and modifier icons on inventory cards and equipped weapon slots.",
+  "version": "0.2.3",
   "author": "Qwettque",
   "api": "1.5",
   "drh": "18",

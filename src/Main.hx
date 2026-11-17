@@ -79,23 +79,60 @@ class Main extends Mod {
 			if (iconAsset != null)
 				drawBadges(root, info);
 		}
+
+		scanEquippedWeapons(inventory);
 	}
 
-	function drawWeaponLevel(root:DisplayObjectContainer, info:ItemInfo):Void {
-		var level = Std.string(info.requiredLevel);
-		var old = findWeaponLevel(root);
-		if (old != null && old.name == WEAPON_LEVEL_NAME + "|" + level)
+	function scanEquippedWeapons(inventory:UIInventory):Void {
+		if (inventory.mHeroWithEquipPicker == null || inventory.mHeroWithEquipPicker.mEquipElements == null)
 			return;
+
+		// The three persistent weapon slots at the bottom of the inventory/store screen.
+		for (element in inventory.mHeroWithEquipPicker.mEquipElements) {
+			if (element == null)
+				continue;
+			// Keep overlays on the outer slot so they stay above the asynchronously loaded art.
+			var root:DisplayObjectContainer = Std.downcast(element.root, DisplayObjectContainer);
+			if (root == null)
+				continue;
+			var info:ItemInfo = ASCompat.reinterpretAs(element.itemInfo, ItemInfo);
+			if (info == null || info.gmWeaponItem == null) {
+				removeBadges(root);
+				removeWeaponLevel(root);
+				continue;
+			}
+			var weaponArt:DisplayObject = element.mIcon;
+			var slotFrame:DisplayObject = ASCompat.coerce((element.root : ASAny).frame, DisplayObject);
+			var boundsSource:DisplayObject = weaponArt == null ? slotFrame : weaponArt;
+			if (boundsSource == null)
+				continue;
+			// Use the fixed slot frame immediately, then switch to the weapon's actual
+			// bounds as soon as its asynchronously loaded icon becomes available.
+			drawWeaponLevel(root, info, -11, boundsSource);
+			if (iconAsset != null)
+				drawBadges(root, info, 0, boundsSource);
+		}
+	}
+
+	function drawWeaponLevel(root:DisplayObjectContainer, info:ItemInfo, topInset:Float = 11, boundsSource:DisplayObject = null):Void {
+		var level = Std.string(info.requiredLevel);
+		var bounds = boundsSource == null ? root.getBounds(root) : boundsSource.getBounds(root);
+		var old = findWeaponLevel(root);
+		if (old != null && old.name == WEAPON_LEVEL_NAME + "|" + level) {
+			old.x = bounds.x + 3;
+			old.y = bounds.y + topInset;
+			root.setChildIndex(old, root.numChildren - 1);
+			return;
+		}
 		if (old != null)
 			root.removeChild(old);
 
-		var bounds = root.getBounds(root);
 		var badge = new Sprite();
 		badge.name = WEAPON_LEVEL_NAME + "|" + level;
 		badge.mouseEnabled = false;
 		badge.mouseChildren = false;
 		badge.x = bounds.x + 3;
-		badge.y = bounds.y + 11;
+		badge.y = bounds.y + topInset;
 		badge.graphics.lineStyle(1, 0xD4A641, 1);
 		badge.graphics.beginFill(0x21130D, 0.94);
 		badge.graphics.drawRoundRect(0, 0, 25, 12, 3, 3);
@@ -114,7 +151,7 @@ class Main extends Mod {
 		root.addChild(badge);
 	}
 
-	function drawBadges(root:DisplayObjectContainer, info:ItemInfo):Void {
+	function drawBadges(root:DisplayObjectContainer, info:ItemInfo, bottomInset:Float = 12, boundsSource:DisplayObject = null):Void {
 		var badges:Array<BadgeData> = [];
 		for (modifier in info.modifiers) {
 			if (modifier == null)
@@ -148,27 +185,40 @@ class Main extends Mod {
 			signatureParts.push(badge.icon + ":" + badge.level + ":" + badge.name);
 		var signature = signatureParts.join("|");
 		var old = findBadges(root);
-		if (old != null && old.name == ROW_NAME + "|" + signature)
+		if (badges.length == 0) {
+			if (old != null)
+				root.removeChild(old);
 			return;
-		if (old != null)
-			root.removeChild(old);
-		if (badges.length == 0)
-			return;
+		}
 
-		var row = new Sprite();
-		row.name = ROW_NAME + "|" + signature;
-		row.mouseEnabled = false;
-		row.mouseChildren = false;
 		var count = badges.length;
-		var available = Math.max(BADGE_WIDTH, root.width - 4);
+		var bounds = boundsSource == null ? root.getBounds(root) : boundsSource.getBounds(root);
+		var available = Math.max(BADGE_WIDTH, bounds.width - 4);
 		var width = Math.min(BADGE_WIDTH, (available - (count - 1) * GAP) / count);
 		var step = width + GAP;
 		var total = count * width + (count - 1) * GAP;
-		// `root.width/height` include the card's display scale, while child coordinates do not.
 		// Use local bounds so the row stays centered under the weapon art at every UI scale.
-		var bounds = root.getBounds(root);
-		row.x = bounds.x + (bounds.width - total) / 2;
-		row.y = bounds.bottom - BADGE_HEIGHT - 12;
+		var rowX = bounds.x + (bounds.width - total) / 2;
+		var rowY = bounds.bottom - BADGE_HEIGHT - bottomInset;
+		var layout = Std.int(Math.round(bounds.x * 10)) + ":" + Std.int(Math.round(bounds.y * 10)) + ":"
+			+ Std.int(Math.round(bounds.width * 10)) + ":" + Std.int(Math.round(bounds.height * 10));
+		var rowName = ROW_NAME + "|" + signature + "|" + layout;
+		if (old != null && old.name == rowName) {
+			old.x = rowX;
+			old.y = rowY;
+			// Keep the modifiers above the weapon art when its SWF loads after the badges.
+			root.setChildIndex(old, root.numChildren - 1);
+			return;
+		}
+		if (old != null)
+			root.removeChild(old);
+
+		var row = new Sprite();
+		row.name = rowName;
+		row.mouseEnabled = false;
+		row.mouseChildren = false;
+		row.x = rowX;
+		row.y = rowY;
 
 		for (i in 0...badges.length)
 			badge(row, badges[i], i * step, width);
